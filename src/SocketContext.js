@@ -1,6 +1,7 @@
 import React, {createContext, useState, useRef, useEffect} from "react";
 import {io} from 'socket.io-client'
 import Peer from 'simple-peer'
+import {signal} from "nodemon/lib/config/defaults";
 
 const SocketContext = createContext()
 
@@ -13,6 +14,7 @@ const ContextProvider = ({children}) => {
     const [call, setCall] = useState({})
     const [callAccepted, setCallAccepted] = useState(false)
     const [callEnded, setCallEnded] = useState(false)
+    const [name, setName] = useState('')
 
     const myVideo = useRef()
     const userVideo = useRef()
@@ -50,8 +52,25 @@ const ContextProvider = ({children}) => {
         connectionRef.current = peer
     }
 
-    const callUser = () => {
+    const callUser = (id) => {
+        const peer = new Peer({initiator: true, trickle: false, stream})
 
+        peer.on('signal', (data) => {
+            socket.emit('calluser', {userToCall: id, signalData: data, from: me, name})
+        })
+
+        peer.on('stream', (currentStream) => {
+            userVideo.current.srcObject = currentStream
+        })
+
+        socket.on('callaccepted', (signal) => {
+            setCallAccepted(true)
+
+            peer.signal(signal)
+
+        })
+
+        connectionRef.current = peer
     }
 
     const leaveCall = () => {}
